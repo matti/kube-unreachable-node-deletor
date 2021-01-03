@@ -6,4 +6,4 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o kube-unreachable-
 
 FROM scratch
 COPY --from=builder /app/kube-unreachable-node-deletor /kube-unreachable-node-deletor
-ENTRYPOINT [ "/kube-unreachable-node-deletor", "1m"]
+ENTRYPOINT [ "/kube-unreachable-node-deletor", "5m"]

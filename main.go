@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"time"
@@ -11,13 +12,17 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
+
+	taintKey := "node.kubernetes.io/unreachable"
+
 	deleteOlderThan, err := time.ParseDuration(os.Args[1])
 	if err != nil {
 		log.Fatalln("parse error", err)
 	}
 
 	old := metav1.NewTime(time.Now().Add(-1 * deleteOlderThan))
-	log.Println("deleting older than", old)
+	log.Println("deleting nodes with taint", taintKey, "which are older than", old)
 
 	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
@@ -28,20 +33,32 @@ func main() {
 		log.Panicln("clientset", err)
 	}
 
-	nodeList, err := clientset.CoreV1().Nodes().List(metav1.ListOptions{})
+	nodeList, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Panicln("node list", err)
 	}
 
 	for _, node := range nodeList.Items {
+		if len(node.Spec.Taints) == 0 {
+			log.Println("node has no taints", node.Name)
+			continue
+		}
+
 		for _, taint := range node.Spec.Taints {
-			if taint.Key != "node.kubernetes.io/unreachable" {
+			if taint.Key != taintKey {
+				log.Println("node ", node.Name, "does not have taint", taintKey)
+				continue
+			}
+			if !taint.TimeAdded.Before(&old) {
+				log.Println("node ", node.Name, "has taint, but ", taint.TimeAdded, "is newer than", old)
 				continue
 			}
 
-			log.Println(node.Name, taint.TimeAdded, taint.TimeAdded.Before(&old))
-			clientset.CoreV1().Nodes().Delete(node.Name, &metav1.DeleteOptions{})
+			log.Println("deleting ", node.Name)
+			clientset.CoreV1().Nodes().Delete(ctx, node.Name, metav1.DeleteOptions{})
+			log.Println("deleted", node.Name)
 		}
 	}
 
+	log.Println("done")
 }
