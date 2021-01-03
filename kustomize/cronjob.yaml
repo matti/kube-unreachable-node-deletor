@@ -1,0 +1,33 @@
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: kube-unreachable-node-deletor
+  namespace: kube-unreachable-node-deletor
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 60
+  jobTemplate:
+    spec:
+      parallelism: 1
+      activeDeadlineSeconds: 240
+      template:
+        spec:
+          nodeSelector:
+            kubernetes.io/arch: amd64
+          serviceAccountName: kube-unreachable-node-deletor
+          containers:
+          - name: kube-unreachable-node-deletor
+            image: mattipaksula/kube-unreachable-node-deletor:sha-761ae9f
+            imagePullPolicy: IfNotPresent
+            args:
+              - 5m
+            resources:
+              limits:
+                memory: 128Mi
+                cpu: 1000m
+              requests:
+                cpu: 1m
+                memory: 32Mi
+          restartPolicy: Never

@@ -1,0 +1,29 @@
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-unreachable-node-deletor
+  namespace: kube-unreachable-node-deletor
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kube-unreachable-node-deletor
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kube-unreachable-node-deletor
+roleRef:
+  kind: ClusterRole
+  name: kube-unreachable-node-deletor
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: kube-unreachable-node-deletor
+  namespace: kube-unreachable-node-deletor
